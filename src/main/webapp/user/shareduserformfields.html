@@ -1,0 +1,24 @@
+<lift:children>
+			<div class="control-group">
+				<label class="control-label" for="firstname">First Name</label>
+				<div class="controls">
+   			<!--  hidden here for formatting -->
+  			 <input type="hidden" id="hidden" />
+					<input type="text" name="firstname" id="firstname" />
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label" for="lastname">Last Name</label>
+				<div class="controls">
+					<input type="text" name="lastname" id="lastname" />
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label" for="email">Email *</label>
+				<div class="controls">
+					<input type="text" name="email" id="email" /> <span
+						data-lift="Msg?id=emailMsg;errorClass=alert alert-error"></span>
+				</div>
+			</div>
+
+</lift:children>

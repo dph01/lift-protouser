@@ -1,0 +1,60 @@
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:lift="http://liftweb.net/">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="description" content="" />
+<meta name="keywords" content="" />
+<title class="lift:Menu.title">Proto User</title>
+
+<!-- <style class="lift:CSS.blueprint"></style>
+<style class="lift:CSS.fancyType"></style>
+ -->
+<script id="json" src="/classpath/json.js" type="text/javascript"></script>
+<script id="jquery" src="/jquery/jquery-1.7.2.js" type="text/javascript"></script>
+
+<link rel="stylesheet" type="text/css" href="/bootstrap/2.0.3/css/bootstrap.css">
+<script id="bootstrap-dropdown" src="/bootstrap/2.0.3/js/bootstrap-dropdown.js" type="text/javascript"></script>
+
+<link rel="stylesheet" href="/css/mediahub.css" type="text/css">
+
+</head>
+<body>
+	<div class="navbar navbar-fixed-top">
+		<div class="navbar-inner">
+			<div class="container">
+				<div class="row">
+					<div class="span10 offset1">
+						<a class="brand" href="/">Proto User</a>
+						<!-- create the 'main' menu items -->
+						<span data-lift="lift:TBNav.menuToTBNav?eager_eval=true"> 
+						  <span data-lift="lift:Menu.builder?top:class=nav;li_item:class=active;linkToSelf=true;expandAll=true;group=main"></span>
+						</span>
+						<!-- create the 'user' (e.g. login/logout etc) menu items -->
+						<span data-lift="lift:TBNav.menuToTBNav?eager_eval=true"> 
+						  <span data-lift="lift:Menu.builder?top:class=nav pull-right;li_item:class=active;linkToSelf=true;expandAll=true;group=user"></span>
+						</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+  <div class="container">
+		 <div class="row">
+      <div class="span10 offset1">
+    		<div class="content" >
+    		  <div id="content">The main content will get bound here</div>
+    		  
+			    <div class="lift:msgs">
+			      <lift:error_class>alert alert-error</lift:error_class>
+            <lift:warning_class>alert alert-success</lift:warning_class>
+            <lift:notice_class>alert alert-info</lift:notice_class>
+					</div>
+				</div>
+      </div>
+    </div>	
+	</div>
+
+	<hr />
+	</div>
+</body>
+</html>
