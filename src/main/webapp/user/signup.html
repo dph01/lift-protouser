@@ -1,10 +1,10 @@
 <div data-lift="lift:surround?with=default;at=content">
-<form data-lift="UserOps.signup?form=post;eager_eval=true" class="form-horizontal">	
-<!-- 	<form data-lift="UserOps.signup?form=post" class="form-horizontal"> -->
+	<form data-lift="UserOps.signup?form=post;eager_eval=true"
+		class="form-horizontal">
 		<fieldset>
 			<legend>Sign Up</legend>
-			<div data-lift="lift:embed?what=/user/shareduserformfields"> </div>
-		<!-- 	
+			<div data-lift="lift:embed?what=/user/shareduserformfields"></div>
+			<!-- 	
 			<input type="hidden" id="hidden" />
 			<div class="control-group">
 				<label class="control-label" for="firstname">First Name</label>
@@ -25,19 +25,27 @@
 					<span data-lift="Msg?id=emailMsg;errorClass=alert alert-error"></span>
 				</div>
 			</div>
-			 --><!-- 
 			 -->
-			<div id="password"></div>
-			<!-- this is a bit of a hack to get the 'repeat' field sitting nicely in the form
-		  It's not very html designer-friendly. All the html is generated in the password.toForm method -->
+			<div class="control-group">
+				<label class="control-label" for="password">Password *</label>
+				<div class="controls">
+					<input id="password" type="password" /> <span
+						data-lift="Msg?id=passwordMsg;errorClass=alert alert-error"></span>
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label" for="repeatpassword">Repeat Password</label>
+				<div class="controls">
+					<input id="repeatpassword" type="password" />
+				</div>
+			</div>
 
 			<div class="control-group">
 				<div class="controls">
-					<input class="btn btn-primary" type="submit" id="submit"
-						name="submit" maxlength="256" />
+					<input class="btn btn-primary" type="submit" id="submit" />
 				</div>
 			</div>
-<!-- 
+			<!-- 
  -->
 		</fieldset>
 	</form>

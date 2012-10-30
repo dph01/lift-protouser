@@ -27,6 +27,15 @@ import org.openqa.selenium.WebElement
 import org.openqa.selenium.By
 import net.liftweb.common.Full
 
+class blah extends FunSpec  {
+  describe("my blah") {
+    it("blah blah") {
+      assert(User.f === 1)
+      assert(User.g === 1)
+    }
+    
+  }
+}
 
 @RunWith(classOf[JUnitRunner])
 class UserTest extends FunSpec with BeforeAndAfterAll with Logger{
@@ -67,44 +76,244 @@ class UserTest extends FunSpec with BeforeAndAfterAll with Logger{
   // val listPageTitle = "App: List Events"
   // val viewPageTitle = "App: View Event"
   val signupPageTitle = "Proto User Sign Up"
+  val homePageTitle = "Proto User Home"
   val editPageTitle = "App: Edit Event"
   val deletePageTitle = "App: Delete Event"
    
+  // error messages we're expecting
+  val emailUnique = "The email address must be unique"
+  val invalidEmail = "Invalid email address"
+  val passwordTooShort = "Password too short"
+  val passwordsDontMatch = "Passwords do not match"
+ 
+    
   describe("user signup screen") {
     
-    it("should load and display all expected fields") {
+    // happy cases:
+    it("should load and display all expected fields and they should be blank") {
       selenium.get(signupPageURL)
       // field verification is done in the constructor
-      val signupPage = new createSignupPage(selenium)
+      val signupPage = new SignupPage(selenium)
+      
+      // check all fields against their expected fields and their values
+      expect(""){signupPage.firstName.getAttribute("Value")}
+      expect(""){signupPage.lastName.getAttribute("Value")}
+      expect(""){signupPage.email.getAttribute("Value")}
+      expect(""){signupPage.emailMsg.getAttribute("Value")}
+      expect(""){signupPage.password.getAttribute("Value")}
+      expect(""){signupPage.passwordMsg.getAttribute("Value")}
+      expect(""){signupPage.repeatPassword.getText}
     }
     
-    // email address field tests
-    it("""should generate an 'invalid email' & 'password must be set' if form is submitted when
-        all fields are blank""") { 
+    it("should submit OK when all fields filled in properly") {
       selenium.get(signupPageURL)
-      val signupPage = new createSignupPage(selenium)
+      val signupPage = new SignupPage(selenium)
+      
+      val firstName = "Fred"
+      val lastName = "Bloggs"
+      val email = "fred@acme.com"
+      val password = "mypass"
+      val repeatPassword = "mypass"
+        
+      signupPage.setFirstName(firstName)
+      signupPage.setLastName(lastName)
+      signupPage.setEmail(email)
+      signupPage.setPassword(password)
+      signupPage.setRepeatPassword(repeatPassword)
+      
+      signupPage.submit
+      
+      // should be back to the home page now
+      val homePage = new HomePage(selenium)
+      
+      // make sure that we've got the right messages displayed
+      homePage.containsNotice("You have signed up.  A validation email message will be sent to you.")
+      
+      // check we've got a user in the database with the correct values
+      val userBox = User.findUserByUserName(email)
+      assert( !userBox.isEmpty, "Could not find user with email: " + email)
+      val user = userBox.open_!
+      expect(firstName){user.firstName}
+      expect(lastName){user.lastName}
+      expect(email){user.email}
+      assert(user.password.match_?(password),"passwords do not match")
+      
+    }
+    
+    /*
+     * error cases
+     */
+    
+    it("""should generate appropriate error msgs when submitting form when all fields are blank""") { 
+      selenium.get(signupPageURL)
+      val signupPage = new SignupPage(selenium)
  
-      // submit with username and password fields blank
+      // submit with all fields blank
+      signupPage.submit
+      
+      // should take us back to the create page with an error messages
+      val signupPage2 = new SignupPage(selenium)
+      
+       // check all fields against their expected fields and their values
+      expect(""){signupPage2.firstName.getText}
+      expect(""){signupPage2.lastName.getText}
+      expect(""){signupPage2.email.getText}
+      expect(invalidEmail){signupPage2.emailMsg.getText}
+      expect(""){signupPage2.password.getText}
+      expect(passwordTooShort){signupPage2.passwordMsg.getText}
+      expect(""){signupPage2.repeatPassword.getText}
+    }
+    
+    it("should generate an appropriate error msg on invalid email address") { 
+      selenium.get(signupPageURL)
+      val signupPage = new SignupPage(selenium)
+ 
+      // submit with all fields blank
+      signupPage.setEmail("blah")
+      signupPage.setPassword("password")
+      signupPage.setRepeatPassword("password")
       signupPage.submit
       
       // should give an error message
-      val signupPage2 = new createSignupPage(selenium)
-      ("emailMsg","Invalid email address") :: ("password", "Password must be set") :: Nil foreach(x => {
-        assert(signupPage2.containsErrorText(x._1, x._2), "error field: " + x._1 + " does not contain: " + x._2)
-      })
-      // assert(signupPage2.containsErrorText("emailMsg", "Invalid email address"),
-      // assert(signupPage2.containsErrorText("password", "Password must be set") === true)
+      val signupPage2 = new SignupPage(selenium)
+      
+      // check all fields against their expected fields and their values
+      expect(""){signupPage2.firstName.getText}
+      expect(""){signupPage2.lastName.getText}
+      expect(""){signupPage2.email.getText}
+      expect(invalidEmail){signupPage2.emailMsg.getText}
+      expect(""){signupPage2.password.getText}
+      expect(""){signupPage2.passwordMsg.getText}
+      expect(""){signupPage2.repeatPassword.getText}
     }
     
-    it("should generate an 'invalid' error message on empty email address") { pending }
-    it("should generate a 'must be unique' error message when address already exists in db") { pending }
+    it("should generate a 'must be unique' error message when address already exists in db") { 
+    
+      val firstName = "Fred"
+      val lastName = "Bloggs"
+      val email = "fred1@acme.com"
+      val password = "mypass"
+      val repeatPassword = password
+ 
+      // first, create a user directly into the database
+      val user = User.create.firstName(firstName).lastName(lastName)
+                      .email(email).saveMe
+      user.password.setList(password :: password :: Nil)
+      user.save
+      
+      selenium.get(signupPageURL)
+      
+      // second, try to create the same user through the signup page
+      val signupPage = new SignupPage(selenium)
+      
+      signupPage.setFirstName(firstName)
+      signupPage.setLastName(lastName)
+      signupPage.setEmail(email)
+      signupPage.setPassword(password)
+      signupPage.setRepeatPassword(repeatPassword)
+      
+      signupPage.submit
+      
+      // should be back to signup page with an error message
+      //debug("blah : " + selenium.getPageSource)
+      val signupPage2 = new SignupPage(selenium)
+      
+      // check all fields against their expected fields and their values
+      expect(firstName){signupPage2.firstName.getAttribute("Value")}
+      expect(lastName){signupPage2.lastName.getAttribute("Value")}
+      expect(email){signupPage2.email.getAttribute("Value")}
+      expect(emailUnique){signupPage2.emailMsg.getText}
+      expect(password){signupPage2.password.getAttribute("Value")}
+      expect(""){signupPage2.passwordMsg.getText}
+      expect(repeatPassword){signupPage2.repeatPassword.getAttribute("Value")}
+    }
     
     // password field tests
-    it("should generate a 'too short' message when both passwords are missing") { pending }
-    it("should generate a 'too short' message when both passwords are the same and less than 5 chars") { pending }
-    it("should generate a 'don't match' message when passwords are different") { pending }
+    it("should generate a 'too short' message when both passwords are the same and less than 5 chars") { 
+      val firstName = "Fred"
+      val lastName = "Bloggs"
+      val email = "fred2@acme.com"
+      val password = "xx"
+      val repeatPassword = password
+ 
+     selenium.get(signupPageURL)
+      
+      // second, try to create the same user through the signup page
+      val signupPage = new SignupPage(selenium)
+      
+      signupPage.setFirstName(firstName)
+      signupPage.setLastName(lastName)
+      signupPage.setEmail(email)
+      signupPage.setPassword(password)
+      signupPage.setRepeatPassword(repeatPassword)
+      
+      signupPage.submit
+      
+      // should be back to signup page with an error message
+      val signupPage2 = new SignupPage(selenium)
+      
+      // check all fields against their expected fields and their values
+      expect(firstName){signupPage2.firstName.getAttribute("Value")}
+      expect(lastName){signupPage2.lastName.getAttribute("Value")}
+      expect(email){signupPage2.email.getAttribute("Value")}
+      expect(""){signupPage2.emailMsg.getText}
+      expect(password){signupPage2.password.getAttribute("Value")}
+      expect(passwordTooShort){signupPage2.passwordMsg.getText}
+      expect(repeatPassword){signupPage2.repeatPassword.getAttribute("Value")}
+    }
+    it("should generate a 'don't match' message when passwords are different") { 
+      val firstName = "Fred"
+      val lastName = "Bloggs"
+      val email = "fred3@acme.com"
+      val password = "mypass"
+      val repeatPassword = "asdfasdf"
+ 
+      selenium.get(signupPageURL)
+      
+      val signupPage = new SignupPage(selenium)
+      
+      signupPage.setFirstName(firstName)
+      signupPage.setLastName(lastName)
+      signupPage.setEmail(email)
+      signupPage.setPassword(password)
+      signupPage.setRepeatPassword(repeatPassword)
+      
+      signupPage.submit
+      
+      // should be back to signup page with an error message
+      val signupPage2 = new SignupPage(selenium)
+      
+      // check all fields against their expected fields and their values
+      expect(firstName){signupPage2.firstName.getAttribute("Value")}
+      expect(lastName){signupPage2.lastName.getAttribute("Value")}
+      expect(email){signupPage2.email.getAttribute("Value")}
+      expect(""){signupPage2.emailMsg.getText}
+      expect(password){signupPage2.password.getAttribute("Value")}
+      expect(passwordsDontMatch){signupPage2.passwordMsg.getText}
+      expect(repeatPassword){signupPage2.repeatPassword.getAttribute("Value")}
+     }
 
-    it("should give a 'logout first' message if you try to signup when already logged in") { pending }
+    it("should give a 'logout first' message if you try to signup when already logged in") { 
+      val firstName = "Fred"
+      val lastName = "Bloggs"
+      val email = "fred4@acme.com"
+      val password = "mypass"
+      val repeatPassword = password
+ 
+      // first, create a user directly into the database and log them in
+      val user = User.create.firstName(firstName).lastName(lastName)
+                      .email(email).saveMe
+      user.password.setList(password :: password :: Nil)
+      user.save
+      User.logUserIn(user)
+      
+      selenium.get(signupPageURL)
+      
+      // second, got to signup page
+      val signupPage = new SignupPage(selenium)
+     
+    }
+    
     it("sigup menu item should be visible when the user isn't logged in") { pending }
   }
   
@@ -137,49 +346,72 @@ class UserTest extends FunSpec with BeforeAndAfterAll with Logger{
     it("should give a 'unknown user' message when the email address entered does not match any in the database") { pending }
   }
   
-  class createSignupPage( val sel: WebDriver ) extends pageNotices {
+  class SignupPage( val sel: WebDriver ) extends pageNotices {
+    
+    //debug("signup page is: " + sel.getPageSource)
     
      // check that we are on the right page
     expect(signupPageTitle) {sel.getTitle}
     
     // ensure we have the right input elements
-    val firstName: Box[WebElement] = tryo(sel.findElement(By.id("firstname")))
-    assert(!firstName.isEmpty)
-    val lastName: Box[WebElement] = tryo(sel.findElement(By.id("lastname")))
-    assert(!lastName.isEmpty)
-    val email: Box[WebElement] = tryo(sel.findElement(By.id("email")))
-    assert(!email.isEmpty)
-    val password: Box[WebElement] = tryo(sel.findElement(By.id("password")))
-    assert(!password.isEmpty)
-    val repeatPassword: Box[WebElement] = tryo(sel.findElement(By.id("repeatpassword")))
-    assert(!repeatPassword.isEmpty)
+    val firstName: WebElement = tryo(sel.findElement(By.id("firstname"))).open_!
+    val lastName: WebElement = tryo(sel.findElement(By.id("lastname"))).open_!
+    val email: WebElement = tryo(sel.findElement(By.id("email"))).open_!
+    val emailMsg: WebElement = tryo(sel.findElement(By.id("emailMsg"))).open_!
+    val password: WebElement = tryo(sel.findElement(By.id("password"))).open_!
+    val passwordMsg: WebElement = tryo(sel.findElement(By.id("passwordMsg"))).open_!
+    val repeatPassword: WebElement = tryo(sel.findElement(By.id("repeatpassword"))).open_!
     
-    def setFirstName(firstNameText: String) : Unit = firstName.foreach( _.sendKeys(firstNameText))
-    def setLastName(lastNameText: String) : Unit = lastName.foreach( _.sendKeys(lastNameText))
-    def setEmail(emailText: String) : Unit = email.foreach( _.sendKeys(emailText))
-    def setPassword(passwordText: String) : Unit = firstName.foreach( _.sendKeys(passwordText))
-    def setRepeatPassword(repeatPasswordText: String) : Unit = firstName.foreach( _.sendKeys(repeatPasswordText))
+//    def setFirstName(firstNameText: String) : Unit = firstName.foreach( _.sendKeys(firstNameText))
+    def setFirstName(firstNameText: String) : Unit = firstName.sendKeys(firstNameText)
+    def setLastName(lastNameText: String) : Unit = lastName.sendKeys(lastNameText)
+    def setEmail(emailText: String) : Unit = email.sendKeys(emailText)
+    def setPassword(passwordText: String) : Unit = password.sendKeys(passwordText)
+    def setRepeatPassword(repeatPasswordText: String) : Unit = repeatPassword.sendKeys(repeatPasswordText)
     
-    def submit : Unit = firstName.foreach(_.submit)
+//    def submit : Unit = firstName.foreach(_.submit)
+    def submit : Unit = firstName.submit
+  }
+  
+  class HomePage( val sel: WebDriver ) extends pageNotices {
+    
+    // debug("home page is: " + sel.getPageSource)
+     // not going to check anything other than that we are on the right page
+    expect(homePageTitle) {sel.getTitle}
+
   }
   
     // a trait to mix into other pages to enable us to check if specified text appears as 
   // either error, 
   trait pageNotices {
       def sel: WebDriver
-      def errorNotices : Box[WebElement] = tryo(selenium.findElement(By.id("lift__noticesContainer___error")))
+      def errorMsgs : Box[WebElement] = tryo(selenium.findElement(By.id("lift__noticesContainer___error")))
+      def noticeMsgs : Box[WebElement] = tryo(selenium.findElement(By.id("lift__noticesContainer___notice")))
+      def warningMsgs : Box[WebElement] = tryo(selenium.findElement(By.id("lift__noticesContainer___warning")))
       
       // check to see if any of the error message contains a specified text
       def containsErrorText(text: String) : Boolean = {
         val errorLIs : scala.collection.mutable.Buffer[WebElement] = {
           // needed to split this out in order to convince the scala type checker
           val emptyList = new java.util.Vector[WebElement]
-          if ( errorNotices.isEmpty) emptyList else  errorNotices.map(x => x.findElements(By.tagName("li"))).open_!
+          if ( errorMsgs.isEmpty) emptyList else  errorMsgs.map(x => x.findElements(By.tagName("li"))).open_!
         }
         // iterate over the error list elements testing to see if the text of any contains the input text
         errorLIs.map(_.getText).exists(s => s.contains(text))
       }
       
+      def containsText(msgs: () => Box[WebElement], text: String) : Boolean = {
+        val msgLIs:  Box[scala.collection.mutable.Buffer[WebElement]] = {
+          msgs().map( m => {
+            val lis: scala.collection.mutable.Buffer[WebElement] = m.findElements(By.tagName("li"))
+            lis
+          }) 
+        }
+        msgLIs.map(x => x.map( _.getText).exists( _.contains(text) )).openOr(false)
+      }
+      
+      def containsNotice(text: String) = containsText(noticeMsgs _, text)
+      def containsError(text: String) = containsText(errorMsgs _, text)
       /**
        * Is there an error message given for a specific field. E.g.
        * <div class="controls">
@@ -201,22 +433,48 @@ class UserTest extends FunSpec with BeforeAndAfterAll with Logger{
          *   <span class="alert alert-error">Invalid email address</span>
          */
         def innerErrorSpans: Box[scala.collection.mutable.Buffer[WebElement] ] = {
-          debug("topLevelErrorSpan: " + topLevelErrorSpan)
+          //debug("topLevelErrorSpan: " + topLevelErrorSpan)
           val ret = topLevelErrorSpan.map(x => {
             // this variable added for force an implicit conversion from java.util.list to mutable buffer
             val z : scala.collection.mutable.Buffer[WebElement] = x.findElements(By.className("alert-error"))
-            debug("z: " + z)
+            //debug("z: " + z)
             z
           })
-          debug("ret: " + ret)
+          //debug("ret: " + ret)
           ret
         }
         
-        // if the innerErrorSpans exist, do any of them contain our text
+        // if the innerErrorSpans exist, do any of them contain our text?
         innerErrorSpans.map(buffer => {
-          debug("buffer: " + buffer)
-          buffer.map( _.getText).exists( s => { debug("testing: " + s + " for: " + text); s.contains(text)})
+          //debug("buffer: " + buffer)
+          buffer.map( _.getText).exists( s => {  s.contains(text)})
         }).openOr(false)
+      }
+      
+      def errorText(fieldId: String) : String = {
+        /* first see if we have an error span for this id, e.g. should return
+         * <span id="emailMsg">
+         *   <span class="alert alert-error">Invalid email address</span>
+         * </span>
+         */
+        def topLevelErrorSpan : Box[WebElement] = tryo(selenium.findElement(By.id(fieldId)))
+        
+        /* second, do any of the inner error spans have the searched for error text
+         *   <span class="alert alert-error">Invalid email address</span>
+         */
+        def innerErrorSpans: Box[scala.collection.mutable.Buffer[WebElement] ] = {
+          val ret = topLevelErrorSpan.map(x => {
+            // this variable added for force an implicit conversion from java.util.list to mutable buffer
+            val z : scala.collection.mutable.Buffer[WebElement] = x.findElements(By.className("alert-error"))
+            z
+          })
+          ret
+        }
+        
+        // if the innerErrorSpans exist, take the first one (assuming there is only one)
+        innerErrorSpans.map(buffer => {
+          buffer.map( _.getText).head
+        }).openOr("")
       }
   }
     

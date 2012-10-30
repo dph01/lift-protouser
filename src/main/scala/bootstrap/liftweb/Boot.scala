@@ -38,6 +38,8 @@ class Boot {
     LiftRules.addToPackages("damianhelme")
     LiftRules.addToPackages("com.damianhelme.tbutils")
     
+    // LiftRules.earlyResponse.append((r: Req ) => if (r.request.scheme != "https") Full(NotFoundResponse("https only")) else Empty)
+    
     def userLinkText = User.currentUser.map(_.shortName).openOr("not logged in").toString
 
     // Build SiteMap

@@ -40,19 +40,26 @@ class UserOps extends Logger {
   
   // called from user/signup.html
   def signup = {
+    
+    // keep passwords as RequestVar so that entered values are preserved if form submission fails
+    object password extends RequestVar[String]("")
+    object repeatPassword extends RequestVar[String]("")
+    
     def processSignup() = {
-      debug("inprocessSignup: " + userInForm)
+      debug("blah")
+      debug("in processSignup: " + userInForm + " with passwords: " + password + ", " + repeatPassword)
+      userInForm.is.password.setList(password.is :: repeatPassword.is :: Nil )
       userInForm.is.validate match {
         case Nil =>
           userInForm.is.validated(User.skipEmailValidation).uniqueId.reset.save
           if (!User.skipEmailValidation) {
             sendValidationEmail(userInForm.is)
             S.notice(S.??("sign.up.message"))
-            S.notice("User Saved")
+            S.seeOther(User.homePage)
           } else {
             User.logUserIn(userInForm, () => {
               S.notice(S.??("welcome"))
-              S.redirectTo(User.homePage)
+              S.seeOther(User.homePage)
             })
           }
         case errors =>
@@ -63,9 +70,11 @@ class UserOps extends Logger {
     // the first time signup is called, userInFrom will be initialised with a
     // new User instance the first time userInForm.is is called
     sharedFormFields &
+    "#password" #> SHtml.password(password.is, password(_) ) &
+    "#repeatpassword" #> SHtml.password(repeatPassword.is, repeatPassword(_) ) &
     // as we're signing up the user we use the password.toForm method. This generates 
     // two password fields, one to enter the password the other to confirm
-    "#password" #> userInForm.is.password.toForm &
+    //"#password" #> userInForm.is.password.toForm &
     "#submit" #> SHtml.submit("Sign Up", processSignup)
   }
 
@@ -167,7 +176,7 @@ class UserOps extends Logger {
     // bind("user", changePasswordXhtml,
          // "old_pwd" -> SHtml.password("", s => oldPassword = s),
          // "new_pwd" -> SHtml.password_*("", LFuncHolder(s => newPassword = s)),
-         // "submit" -> changePasswordSubmitButton(S.??("change"), testAndSet _))
+         // "submit" -> changePasswordSubmitButton(S.?("change"), testAndSet _))
 
   }
   /**************************************************************************
