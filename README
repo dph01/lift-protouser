@@ -1,9 +1,0 @@
-This is a clone of https://github.com/lift/lift_24_sbt/tree/master/scala_29/lift_basic which I plan to keep updated with the latest version of sbt and the related plugins.
-
-Currently the versions are:
-
-sbt: 0.11.2
-xsbt-webplugin: 0.2.10
-sbt-eclipse: 2.0.0-M3
-scala: 2.9.1
-lift: 2.4

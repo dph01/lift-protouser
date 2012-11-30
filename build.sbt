@@ -1,4 +1,7 @@
 // set the name of the project
+import de.johoop.jacoco4sbt._
+import JacocoPlugin._
+
 name := "Proto User"
 
 version := "0.1.0"
@@ -15,25 +18,33 @@ organization := "mycom"
 scanDirectories in Compile := Nil
 
 libraryDependencies ++= {
-    val liftVersion = "2.4"
+    val liftVersion = "2.5-M2"
   	Seq(
-    		"net.liftweb" %% "lift-webkit" % liftVersion % "compile",
-    		"net.liftweb" %% "lift-mapper" % liftVersion % "compile",
-    		"net.liftweb" %% "lift-record" % liftVersion % "compile",
-    		"net.liftweb" %% "lift-wizard" % liftVersion % "compile",
-		"net.liftweb" %% "lift-widgets" % liftVersion % "compile",
-		"ch.qos.logback" % "logback-classic" % "0.9.26" % "compile",
-		"com.h2database" % "h2" % "1.2.138",
-		"mysql" % "mysql-connector-java" % "5.1.16",
-		"javax.servlet" % "servlet-api" % "2.5" % "provided",
-		"org.mortbay.jetty" % "jetty" % "6.1.26" % "test,container",
-		"org.mortbay.jetty" % "jetty-plus" % "6.1.26" % "test,container",
-		"junit" % "junit" % "4.5" % "test",
-		"org.scala-tools.testing" %% "specs" % "1.6.9" % "test",
-    "org.scalatest" %% "scalatest" % "1.8" % "test",
-    "com.damianhelme" %% "tbutils" % "0.1.0" % "compile" withSources(),
-    "org.seleniumhq.selenium" % "selenium-java" % "2.23.1" % "compile,test" ,
-    "org.scala-lang" % "scala-compiler" % "2.9.1"
+    	"net.liftweb" %% "lift-webkit" % liftVersion % "compile" withSources(),
+    	"net.liftweb" %% "lift-mapper" % liftVersion % "compile" withSources(),
+    	"net.liftweb" %% "lift-record" % liftVersion % "compile" withSources(),
+    	"net.liftweb" %% "lift-wizard" % liftVersion % "compile" withSources(),
+		  //"net.liftweb" %% "lift-widgets" % liftVersion % "compile" withSources(),
+		  "net.liftmodules"   %% "lift-jquery-module" % (liftVersion + "-1.0"),
+      "org.eclipse.jetty" % "jetty-webapp"        % "8.1.7.v20120910"  % "container,test",
+//      "org.eclipse.jetty.orbit" % "javax.servlet" % "3.0.0.v201112011016" % "container,test,compile" artifacts Artifact("javax.servlet", "jar", "jar"),
+      "org.eclipse.jetty.orbit" % "javax.servlet" % "3.0.0.v201112011016" % "container,test" artifacts Artifact("javax.servlet", "jar", "jar"),
+		  // "org.mortbay.jetty" % "jetty" % "6.1.26" % "test,container",
+		  // "org.mortbay.jetty" % "jetty-plus" % "6.1.26" % "test,container",
+      "ch.qos.logback"    % "logback-classic"     % "1.0.6",
+		  // "ch.qos.logback" % "logback-classic" % "0.9.26" % "compile" withSources(),
+      "org.specs2"        %% "specs2"             % "1.12.1"           % "test",
+//		  "org.scala-tools.testing" %% "specs" % "1.6.9" % "test",
+      "com.h2database"    % "h2"                  % "1.3.167",
+		  //"com.h2database" % "h2" % "1.2.138",
+		  "mysql" % "mysql-connector-java" % "5.1.16",
+		  //"javax.servlet" % "servlet-api" % "2.5" % "provided",
+		  "junit" % "junit" % "4.5" % "test",
+      "org.scalatest" %% "scalatest" % "1.8" % "test",
+      "org.seleniumhq.selenium" % "selenium-server" % "2.25.0" % "test",
+      "com.damianhelme" %% "tbutils" % "0.1.0" % "compile" withSources()
+      // "org.seleniumhq.selenium" % "selenium-server" % "2.23.1" % "compile,test" 
+      //"org.scala-lang" % "scala-compiler" % "2.9.1"
   	)
 }
 
@@ -43,8 +54,15 @@ libraryDependencies ++= {
 	mainClass := Some("RunWebApp")
 	
   // for the code coverage tool, sbt-scct
-  seq(ScctPlugin.scctSettings: _*)
+  seq(ScctPlugin.instrumentSettings: _*)
 	
+    // fullClasspath in ScctPlugin.Config <+= (baseDirectory) map { bd => 
+        // Attributed.blank(bd / "src/main/resources") }
+        
+   seq(jacoco.settings : _*)
+	
+	// https://github.com/jrudolph/sbt-dependency-graph
+	net.virtualvoid.sbt.graph.Plugin.graphSettings
 	
 	// https://groups.google.com/forum/?hl=en#!activity/liftweb/Um5ghzYMDUoJ/liftweb/DDTzzxRbCNU/qEo0lIbTv4kJ
 	// needed for javaMail 1.4.4

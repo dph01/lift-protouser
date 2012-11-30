@@ -46,7 +46,6 @@ class UserOps extends Logger {
     object repeatPassword extends RequestVar[String]("")
     
     def processSignup() = {
-      debug("blah")
       debug("in processSignup: " + userInForm + " with passwords: " + password + ", " + repeatPassword)
       userInForm.is.password.setList(password.is :: repeatPassword.is :: Nil )
       userInForm.is.validate match {
@@ -54,11 +53,11 @@ class UserOps extends Logger {
           userInForm.is.validated(User.skipEmailValidation).uniqueId.reset.save
           if (!User.skipEmailValidation) {
             sendValidationEmail(userInForm.is)
-            S.notice(S.??("sign.up.message"))
+            S.notice(S.?("sign.up.message"))
             S.seeOther(User.homePage)
           } else {
             User.logUserIn(userInForm, () => {
-              S.notice(S.??("welcome"))
+              S.notice(S.?("welcome"))
               S.seeOther(User.homePage)
             })
           }
@@ -127,16 +126,15 @@ class UserOps extends Logger {
    * Edit User Stuff
    */
   def edit = {
+    // TODO - if the userInForm requestVar is not set can we assume that we're edit the logged in user?
     if (! userInForm.set_? )
-      userInForm(User.currentUser.open_!)
-    //val user: User = User.currentUser.open_! // we know we're logged in
+      userInForm(User.currentUser.openOrThrowException("user should be logged in when accessing edit page"))
 
-    // def processEditSave(user: User) = {
     def processEditSave = {
       userInForm.is.validate match {
       case Nil =>
         userInForm.is.save
-        S.notice(S.??("profile.updated"))
+        S.notice(S.?("profile.updated"))
         S.redirectTo(User.homePage)
       case xs => S.error(xs)
       }
@@ -152,17 +150,17 @@ class UserOps extends Logger {
    * change it.
    */
   def changePassword = {
-    val user = User.currentUser.open_! // we can do this because the logged in test has happened
+    val user = User.currentUser.openOrThrowException("user should be logged in when changing the password")
     object oldPassword extends RequestVar[String]("")
     object newPassword1 extends RequestVar[String]("")
     object newPassword2 extends RequestVar[String]("")
 
     def testAndSet() {
-      if (!user.password.match_?(oldPassword)) S.error(S.??("wrong.old.password"))
+      if (!user.password.match_?(oldPassword)) S.error(S.?("wrong.old.password"))
       else {
         user.password.setList(newPassword1.is :: newPassword2.is :: Nil)
         user.validate match {
-          case Nil => user.save; S.notice(S.??("password.changed")); S.redirectTo(User.homePage)
+          case Nil => user.save; S.notice(S.?("password.changed")); S.redirectTo(User.homePage)
           case xs => S.error(xs)
         }
       }
@@ -208,16 +206,16 @@ class UserOps extends Logger {
             }
 
             User.logUserIn(user, () => {
-              S.notice(S.??("logged.in"))
+              S.notice(S.?("logged.in"))
               preLoginState()
               S.redirectTo(redir)
             })
           }
 
         case Full(user) if !user.validated.is =>
-          S.error(S.??("account.validation.error"))
+          S.error(S.?("account.validation.error"))
 
-        case _ => S.error(S.??("invalid.credentials"))
+        case _ => S.error(S.?("invalid.credentials"))
       }
     }
 
@@ -241,7 +239,7 @@ class UserOps extends Logger {
      */
     def sendPasswordReset(email: String) {
       User.findUserByUserName(email) match {
-        case Full(user) if user.validated =>
+        case Full(user) if user.validated.get =>
           user.uniqueId.reset.save
           val resetLink = S.hostAndPath+
           User.resetPasswordPath.mkString("/", "/", "/")+urlEncode(user.uniqueId.is)
@@ -254,12 +252,12 @@ class UserOps extends Logger {
                            generateResetEmailBodies(user, resetLink) :::
                            (User.bccEmail.toList.map(BCC(_)))) :_*)
   
-          S.notice(S.??("password.reset.email.sent"))
+          S.notice(S.?("password.reset.email.sent"))
           S.redirectTo(User.homePage)
   
         case Full(user) =>
           sendValidationEmail(user)
-          S.notice(S.??("account.validation.resent"))
+          S.notice(S.?("account.validation.resent"))
           S.redirectTo(User.homePage)
   
         case _ => S.error(User.userNameNotFoundString)
@@ -312,7 +310,7 @@ class UserOps extends Logger {
         def finishSet() {
           user.password.setList(password1 :: password2 :: Nil)
           user.validate match {
-            case Nil => S.notice(S.??("password.changed"))
+            case Nil => S.notice(S.?("password.changed"))
               user.uniqueId.reset().save
               User.logUserIn(user, () => S.redirectTo(User.homePage))
             case xs => S.error(xs)
@@ -322,7 +320,7 @@ class UserOps extends Logger {
         "#password2" #> SHtml.password("", password2 = _) &
         "#submit" #> SHtml.submit("Submit", finishSet _)
         
-      case _ => S.error(S.??("password.link.invalid")); S.redirectTo(User.homePage)
+      case _ => S.error(S.?("password.link.invalid")); S.redirectTo(User.homePage)
     }
   }
 

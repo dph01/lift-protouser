@@ -53,7 +53,7 @@ class User
   object email extends MappedEmail(this, User.emailLen) {
     override def uniqueFieldId = Some("emailMsg") // used for displaying err msg next to field
     override def dbIndexed_? = true
-    override def validations = valUnique(S.??("unique.email.address")) _ :: super.validations
+    override def validations = valUnique(S.?("unique.email.address")) _ :: super.validations
 
     /*
     override def toForm: Box[Elem] = {
@@ -75,7 +75,7 @@ class User
           <div class="control-group">
             <label class="control-label" for="password">Password</label>
             <div class="controls">
-              <input id={ uniqueFieldId.open_! } type="password" name={ funcName } value={ is.toString }/>
+              <input id={ uniqueFieldId.openOrThrowException("uniqueFieldId not set") } type="password" name={ funcName } value={ is.toString }/>
               <span data-lift="Msg?id=password;errorClass=alert alert-error"></span>
             </div>
           </div>
@@ -316,7 +316,8 @@ object User extends User
 
   def logUserIn(who: User, postLogin: () => Nothing): Nothing = {
     if (destroySessionOnLogin) {
-      S.session.open_!.destroySessionAndContinueInNewSession(() => {
+      S.session.openOrThrowException("trying to access empty session").
+          destroySessionAndContinueInNewSession(() => {
         logUserIn(who)
         postLogin()
       })
@@ -375,44 +376,44 @@ object User extends User
    */
   import net.liftweb.sitemap.Loc._
 
-  lazy val testLoggedIn = If(loggedIn_? _, (S.??("must.be.logged.in")))
-  lazy val testNotLoggedIn = Unless(loggedIn_? _, (S.??("must.be.logged.in")))
+  lazy val testLoggedIn = If(loggedIn_? _, (S.?("must.be.logged.in")))
+  lazy val testNotLoggedIn = Unless(loggedIn_? _, (S.?("must.be.logged.in")))
 
   /**
    * A Menu.LocParam to test if the user is a super user
    */
-  lazy val testSuperUser = If(superUser_? _, S.??("must.be.super.user"))
+  lazy val testSuperUser = If(superUser_? _, S.?("must.be.super.user"))
 
   // def loginMenuLoc = Menu("Login") / "user" / "login" >> User.testNotLoggedIn >> LocGroup("user") 
 
-  def loginMenuLoc = Menu(Loc("Login", loginPath, S.??("login"),
+  def loginMenuLoc = Menu(Loc("Login", loginPath, S.?("login"),
     User.testNotLoggedIn :: LocGroup("user") :: Nil))
 
-  def signupMenuLoc = Menu(Loc("Signup", signUpPath, S.??("sign.up"),
+  def signupMenuLoc = Menu(Loc("Signup", signUpPath, S.?("sign.up"),
     User.testNotLoggedIn :: LocGroup("user") :: Nil))
 
-  def logoutMenuLoc = Menu(Loc("Logout", logoutPath, S.??("logout"),
+  def logoutMenuLoc = Menu(Loc("Logout", logoutPath, S.?("logout"),
     User.testLoggedIn :: Template(() => doLogout) :: Nil))
 
-  def editUserMenuLoc = Menu(Loc("EditUser", editPath, S.??("edit.user"),
+  def editUserMenuLoc = Menu(Loc("EditUser", editPath, S.?("edit.user"),
     User.testLoggedIn :: Nil))
 
-  def changePasswordMenuLoc = Menu(Loc("ChangePassword", changePasswordPath, S.??("change.password"),
+  def changePasswordMenuLoc = Menu(Loc("ChangePassword", changePasswordPath, S.?("change.password"),
     User.testLoggedIn :: Nil))
 
   // reset - is the link that is sent in response to the user submitting a 'lost password' form
   // the password reset request comes in with a unique id on the end
   // e.g. /user/resetpassword/K2UVO2NH51P5HT1WOA5PMCDRSM2PIS2R 
-  def resetPasswordMenuLoc = Menu(Loc("ResetPassword", (resetPasswordPath, true), S.??("reset.password"),
+  def resetPasswordMenuLoc = Menu(Loc("ResetPassword", (resetPasswordPath, true), S.?("reset.password"),
     // we need to specify the template explicitly to stop Lift looking for a template of the name
     // K2UVO2NH51P5HT1WOA5PMCDRSM2PIS2R
     Template(() => Templates(resetPasswordPath).openOr(NodeSeq.Empty)) :: User.testNotLoggedIn :: Nil))
 
   // lost - sends a email to the user for when they've forgotten their password
-  def lostPasswordMenuLoc = Menu(Loc("LostPassword", lostPasswordPath, S.??("lost.password"),
+  def lostPasswordMenuLoc = Menu(Loc("LostPassword", lostPasswordPath, S.?("lost.password"),
     LocGroup("user") :: User.testNotLoggedIn :: Nil))
 
-  def validateUserMenuLoc = Menu(Loc("ValidateUser", (validateUserPath, true), S.??("validate.user"),
+  def validateUserMenuLoc = Menu(Loc("ValidateUser", (validateUserPath, true), S.?("validate.user"),
     User.testNotLoggedIn :: Template(() => validateUser(snarfLastItem)) :: Hidden :: Nil))
 
   protected def snarfLastItem: String =
@@ -429,29 +430,29 @@ object User extends User
     // val id = (for (r <- S.request) yield r.path.wholePath.last) openOr ""
 
     User.findUserByUniqueId(id) match {
-      case Full(user) if !user.validated =>
+      case Full(user) if !user.validated.get =>
         user.validated(true).uniqueId.reset().save
         User.logUserIn(user, () => {
-          S.notice(S.??("account.validated"))
+          S.notice(S.?("account.validated"))
           S.redirectTo(User.homePage)
         })
 
-      case _ => S.error(S.??("invalid.validation.link")); S.redirectTo(User.homePage)
+      case _ => S.error(S.?("invalid.validation.link")); S.redirectTo(User.homePage)
     }
   }
   /*
    *  email stuff
    */
   def skipEmailValidation = false
-  def signupMailSubject = S.??("sign.up.confirmation")
+  def signupMailSubject = S.?("sign.up.confirmation")
   def emailFrom = "noreply@" + S.hostName
   def bccEmail: Box[String] = Empty
-  def passwordResetEmailSubject = S.??("reset.password.request")
+  def passwordResetEmailSubject = S.?("reset.password.request")
   /**
    * The string that's generated when the user name is not found.  By
-   * default: S.??("email.address.not.found")
+   * default: S.?("email.address.not.found")
    */
-  def userNameNotFoundString: String = S.??("email.address.not.found")
+  def userNameNotFoundString: String = S.?("email.address.not.found")
 
   // override def loginXhtml : Elem = Templates("user" :: "login" :: Nil) map(_.asInstanceOf[Elem]) openOr <b>Login Template missing</b> 
   // override def signupXhtml(user: TheUserType) : Elem = Templates("user" :: "signup" :: Nil) map(_.asInstanceOf[Elem]) openOr <b>Signup Template missing</b> 
@@ -486,11 +487,11 @@ object User extends User
     theUser.save
     if (!skipEmailValidation) {
       sendValidationEmail(theUser)
-      S.notice(S.??("sign.up.message"))
+      S.notice(S.?("sign.up.message"))
       func()
     } else {
     	//logUserIn(theUser, () => {      
-    	// S.notice(S.??("welcome"))
+    	// S.notice(S.?("welcome"))
       func() //  } //) } } */
 
 }

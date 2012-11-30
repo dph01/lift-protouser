@@ -2,27 +2,27 @@ package bootstrap.liftweb
 
 import net.liftweb.util.Helpers._
 import net.liftweb.util.Props
-import net.liftweb.common.{Box,Full,Empty}
-import net.liftweb.http.{LiftRules,S,Req,Html5Properties}
-import net.liftweb.sitemap.{SiteMap,Menu,Loc}
+import net.liftweb.common.{ Box, Full, Empty }
+import net.liftweb.http.{ LiftRules, S, Req, Html5Properties }
+import net.liftweb.sitemap.{ SiteMap, Menu, Loc }
 import net.liftweb.sitemap.Loc._
-import net.liftweb.mapper.{StandardDBVendor,DB,Schemifier,DefaultConnectionIdentifier}
-
+import net.liftweb.mapper.{ StandardDBVendor, DB, Schemifier, DefaultConnectionIdentifier }
 import damianhelme.model.User
-
+import net.liftweb.mapper.By
+import net.liftweb.common.Logger
 
 /**
  * A class that's instantiated early and run.  It allows the application
  * to modify lift's environment
  */
-class Boot {
+class Boot extends Logger {
   def boot {
     if (!DB.jndiJdbcConnAvailable_?) {
-      val vendor = 
-	new StandardDBVendor(Props.get("db.driver") openOr "org.h2.Driver",
-			     Props.get("db.url") openOr 
-			     "jdbc:h2:lift_proto.db;AUTO_SERVER=TRUE",
-			     Props.get("db.user"), Props.get("db.password"))
+      val vendor =
+        new StandardDBVendor(Props.get("db.driver") openOr "org.h2.Driver",
+          Props.get("db.url") openOr
+            "jdbc:h2:lift_proto.db;AUTO_SERVER=TRUE",
+          Props.get("db.user"), Props.get("db.password"))
 
       LiftRules.unloadHooks.append(vendor.closeAllConnections_! _)
 
@@ -37,30 +37,30 @@ class Boot {
     // where to search snippet
     LiftRules.addToPackages("damianhelme")
     LiftRules.addToPackages("com.damianhelme.tbutils")
-    
-    // LiftRules.earlyResponse.append((r: Req ) => if (r.request.scheme != "https") Full(NotFoundResponse("https only")) else Empty)
-    
-    def userLinkText = User.currentUser.map(_.shortName).openOr("not logged in").toString
 
-    // Build SiteMap
-    def sitemap = SiteMap(
-      Menu.i("Home") / "index", // the simple way to declare a menu
-                  User.loginMenuLoc,
-            User.signupMenuLoc,
-            User.lostPasswordMenuLoc,
-            User.resetPasswordMenuLoc,
-            User.validateUserMenuLoc,
-            Menu("user",userLinkText)  / "user" >> 
-              User.testLoggedIn >> LocGroup("user") >> PlaceHolder submenus (
-                  User.logoutMenuLoc,
-                  User.editUserMenuLoc,
-                  User.changePasswordMenuLoc
-             ), 
+      // LiftRules.earlyResponse.append((r: Req ) => if (r.request.scheme != "https") Full(NotFoundResponse("https only")) else Empty)
 
-      // more complex because this menu allows anything in the
-      // /static path to be visible
-      Menu(Loc("Static", Link(List("static"), true, "/static/index"), 
-	       "Static Content")))
+      def userLinkText = User.currentUser.map(_.shortName).openOr("not logged in").toString
+
+      // Build SiteMap
+      def sitemap = SiteMap(
+        Menu.i("Home") / "index", // the simple way to declare a menu
+        User.loginMenuLoc,
+        User.signupMenuLoc,
+        User.lostPasswordMenuLoc,
+        User.resetPasswordMenuLoc,
+        User.validateUserMenuLoc,
+        Menu("user", userLinkText) / "user" >>
+          User.testLoggedIn >> LocGroup("user") >> PlaceHolder submenus (
+            User.logoutMenuLoc,
+            User.editUserMenuLoc,
+            User.changePasswordMenuLoc
+          ),
+
+        // more complex because this menu allows anything in the
+        // /static path to be visible
+        Menu(Loc("Static", Link(List("static"), true, "/static/index"),
+          "Static Content")))
 
     // def sitemapMutators = User.sitemapMutator
 
@@ -70,12 +70,12 @@ class Boot {
     LiftRules.setSiteMap(sitemap)
 
     // Use jQuery 1.4
-    LiftRules.jsArtifacts = net.liftweb.http.js.jquery.JQuery14Artifacts
+    // LiftRules.jsArtifacts = net.liftweb.http.js.jquery.JQuery14Artifacts
 
     //Show the spinny image when an Ajax call starts
     LiftRules.ajaxStart =
       Full(() => LiftRules.jsArtifacts.show("ajax-loader").cmd)
-    
+
     // Make the spinny image go away when it ends
     LiftRules.ajaxEnd =
       Full(() => LiftRules.jsArtifacts.hide("ajax-loader").cmd)
@@ -88,9 +88,22 @@ class Boot {
 
     // Use HTML5 for rendering
     LiftRules.htmlProperties.default.set((r: Req) =>
-      new Html5Properties(r.userAgent))    
+      new Html5Properties(r.userAgent))
 
     // Make a transaction span the whole HTTP request
     S.addAround(DB.buildLoanWrapper)
+
+      // create a admin user if one doesn't exist
+    def adminEmail = "admin@dummy.com"
+    User.find(By(User.email, adminEmail)).openOr({
+      debug("creating admin user:")
+      User.create.firstName("admin")
+        .password("admin")
+        .email(adminEmail)
+        .superUser(true)
+        .validated(true)
+        .saveMe
+    })
+
   }
 }

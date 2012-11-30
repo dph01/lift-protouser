@@ -15,8 +15,8 @@ import net.liftweb.util.StringHelpers
 import net.liftweb.common.Empty
 import net.liftweb.http.{LiftRules,Req, Html5Properties}
 import org.scalatest.BeforeAndAfterAll
-import org.mortbay.jetty.webapp.WebAppContext
-import org.mortbay.jetty.Server
+import org.eclipse.jetty.webapp.WebAppContext
+import org.eclipse.jetty.server.{Handler, Server}
 import java.util.concurrent.TimeUnit
 import net.liftweb.common.Box
 import net.liftweb.util.Helpers.tryo
@@ -43,7 +43,7 @@ class UserTest extends FunSpec with BeforeAndAfterAll with Logger{
     private var server : Server       = null
     private var selenium : WebDriver  = null
     private val GUI_PORT              = 8081
-    private var host                  = "http://localhost:" + GUI_PORT.toString
+    private val host                  = "http://localhost:" + GUI_PORT.toString
 
 
     override def beforeAll() {
@@ -54,12 +54,13 @@ class UserTest extends FunSpec with BeforeAndAfterAll with Logger{
     context.setServer(server)
     context.setContextPath("/")
     context.setWar("src/main/webapp")
-    server.addHandler(context)
+//    server.addHandler(context)
+    server.setHandler(context)
     server.start()
 
     // Setting up the Selenium Client for the duration of the tests
-    selenium = new HtmlUnitDriver();
-    selenium.manage().timeouts().implicitlyWait(2, TimeUnit.SECONDS);
+     selenium = new HtmlUnitDriver();
+     selenium.manage().timeouts().implicitlyWait(2, TimeUnit.SECONDS);
   }
 
   override def afterAll() {
@@ -130,9 +131,7 @@ class UserTest extends FunSpec with BeforeAndAfterAll with Logger{
       homePage.containsNotice("You have signed up.  A validation email message will be sent to you.")
       
       // check we've got a user in the database with the correct values
-      val userBox = User.findUserByUserName(email)
-      assert( !userBox.isEmpty, "Could not find user with email: " + email)
-      val user = userBox.open_!
+      val user = User.findUserByUserName(email).openOrThrowException("Could not find user with email: " + email)
       expect(firstName){user.firstName}
       expect(lastName){user.lastName}
       expect(email){user.email}
@@ -323,12 +322,14 @@ class UserTest extends FunSpec with BeforeAndAfterAll with Logger{
     it("should give 'invalid' message when password does not match and retain entered password") { pending }
     it("should give a 'logout first' message if you try to login when already logged in") { pending }
     it("login menu item should be visible when the user isn't logged in") { pending }
+    it("login menu item should not be visible when the user is logged in") { pending }
   }
   
   describe("logout") {
     it("should log the user out and take them back to the home page") { pending }
     it("should give a 'use needs to be logged in' message if you try to log out when already logged out") { pending }
-    it("login menu item should only be visible when the user is logged in") { pending }
+    it("login menu item should be visible when the user is logged in") { pending }
+    it("login menu item should not be visible when no user is logged in") { pending }
     
   }
   
@@ -353,23 +354,23 @@ class UserTest extends FunSpec with BeforeAndAfterAll with Logger{
      // check that we are on the right page
     expect(signupPageTitle) {sel.getTitle}
     
-    // ensure we have the right input elements
-    val firstName: WebElement = tryo(sel.findElement(By.id("firstname"))).open_!
-    val lastName: WebElement = tryo(sel.findElement(By.id("lastname"))).open_!
-    val email: WebElement = tryo(sel.findElement(By.id("email"))).open_!
-    val emailMsg: WebElement = tryo(sel.findElement(By.id("emailMsg"))).open_!
-    val password: WebElement = tryo(sel.findElement(By.id("password"))).open_!
-    val passwordMsg: WebElement = tryo(sel.findElement(By.id("passwordMsg"))).open_!
-    val repeatPassword: WebElement = tryo(sel.findElement(By.id("repeatpassword"))).open_!
+    private def getElement(name: String): WebElement = tryo(sel.findElement(By.id(name))).openOrThrowException("could not find element: " + name)
     
-//    def setFirstName(firstNameText: String) : Unit = firstName.foreach( _.sendKeys(firstNameText))
+    // ensure we have the right input elements
+    val firstName: WebElement = getElement("firstname")
+    val lastName: WebElement = getElement("lastname") 
+    val email: WebElement = getElement("email")
+    val emailMsg: WebElement = getElement("emailMsg")
+    val password: WebElement = getElement("password")
+    val passwordMsg: WebElement = getElement("passwordMsg")
+    val repeatPassword: WebElement = getElement("repeatpassword")
+    
     def setFirstName(firstNameText: String) : Unit = firstName.sendKeys(firstNameText)
     def setLastName(lastNameText: String) : Unit = lastName.sendKeys(lastNameText)
     def setEmail(emailText: String) : Unit = email.sendKeys(emailText)
     def setPassword(passwordText: String) : Unit = password.sendKeys(passwordText)
     def setRepeatPassword(repeatPasswordText: String) : Unit = repeatPassword.sendKeys(repeatPasswordText)
     
-//    def submit : Unit = firstName.foreach(_.submit)
     def submit : Unit = firstName.submit
   }
   
@@ -394,7 +395,7 @@ class UserTest extends FunSpec with BeforeAndAfterAll with Logger{
         val errorLIs : scala.collection.mutable.Buffer[WebElement] = {
           // needed to split this out in order to convince the scala type checker
           val emptyList = new java.util.Vector[WebElement]
-          if ( errorMsgs.isEmpty) emptyList else  errorMsgs.map(x => x.findElements(By.tagName("li"))).open_!
+          if ( errorMsgs.isEmpty) emptyList else  errorMsgs.map(x => x.findElements(By.tagName("li"))).openOrThrowException("could not find 'li' elements in error messages")
         }
         // iterate over the error list elements testing to see if the text of any contains the input text
         errorLIs.map(_.getText).exists(s => s.contains(text))
