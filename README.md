@@ -6,7 +6,7 @@ This is a refactoring of Lift's ProtoUser code. It provides an easier starting p
 
 It also adds the following changes:
 
-  * to read screen html code from template files
-  * integrate Twitter Bootstrap
-  * use RequestVars to manage server state as described here: TODO
-  * add admin CRUD facilities
+  * reads html code from template files
+  * integrates Twitter Bootstrap
+  * uses RequestVars to manage server state as described here: TODO
+  * adds admin CRUD facilities
