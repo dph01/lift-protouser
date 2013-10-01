@@ -22,10 +22,7 @@ case x if (x.startsWith("0.12")) => "com.github.siasia" %% "xsbt-web-plugin" % "
 })
 
 // sbt-scct
-// addSbtPlugin("ch.craven" %% "scct-plugin" % "0.2.1")
-resolvers += "scct-github-repository" at "http://mtkopone.github.com/scct/maven-repo"
-
-addSbtPlugin("reaktor" % "sbt-scct" % "0.2-SNAPSHOT")
+addSbtPlugin("com.github.scct" % "sbt-scct" % "0.2")
 
 libraryDependencies ++= Seq(
   "org.jacoco" % "org.jacoco.core" % "0.5.9.201207300726" artifacts(Artifact("org.jacoco.core", "jar", "jar")),
